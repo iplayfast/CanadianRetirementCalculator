@@ -1,0 +1,82 @@
+{
+  "id": "m8q3hv6ho6dxsmt37n8",
+  "name": "ChrisRaina",
+  "description": "",
+  "createdAt": "2025-03-27T15:45:16.297Z",
+  "updatedAt": "2025-03-27T15:45:16.297Z",
+  "planData": {
+    "name": "Chris",
+    "age": 65,
+    "retirementAge": 67,
+    "lifeExpectancy": 90,
+    "province": "ON",
+    "hasSpouse": true,
+    "spouseInfo": {
+      "name": "Raina",
+      "age": 65,
+      "retirementAge": 64,
+      "lifeExpectancy": 90,
+      "currentRSP": 443542,
+      "currentTFSA": 39100,
+      "currentOtherInvestments": 0,
+      "employmentIncome": 16000,
+      "expectedCPP": {
+        "at60": 0,
+        "at65": 0,
+        "at70": 900
+      },
+      "expectedOAS": {
+        "at65": 0,
+        "at70": 713
+      },
+      "currentCPP": 700,
+      "currentOAS": 713,
+      "extraIncomeStreams": [
+        {
+          "id": "m8ougvs3r9x17xn6hh",
+          "description": "solar",
+          "yearlyAmount": 1300,
+          "startYear": 2025,
+          "hasInflation": false
+        }
+      ],
+      "isCollectingCPP": false,
+      "isCollectingOAS": false
+    },
+    "currentRSP": 431520,
+    "currentTFSA": 30948,
+    "currentOtherInvestments": 0,
+    "rrspRoom": 0,
+    "tfsaRoom": 0,
+    "employmentIncome": 140000,
+    "otherIncome": [],
+    "extraIncomeStreams": [
+      {
+        "id": "m8ougk2vn6xc7jt89p9",
+        "description": "solar",
+        "yearlyAmount": 1300,
+        "startYear": 2025,
+        "hasInflation": false
+      }
+    ],
+    "expectedCPP": {
+      "at60": 0,
+      "at65": 0,
+      "at70": 1932
+    },
+    "expectedOAS": {
+      "at65": 0,
+      "at70": 976
+    },
+    "currentCPP": 1389,
+    "currentOAS": 740,
+    "isCollectingCPP": false,
+    "isCollectingOAS": false,
+    "currentAnnualExpenses": 60000,
+    "retirementAnnualExpenses": 60000,
+    "inflationRate": 2,
+    "rspGrowthRate": 5,
+    "tfsaGrowthRate": 5,
+    "otherInvestmentsGrowthRate": 5
+  }
+}

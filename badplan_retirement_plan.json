@@ -1,0 +1,33 @@
+{
+  "id": "m8m2s1foby0exlpw71",
+  "name": "badplan",
+  "description": "",
+  "createdAt": "2025-03-23T20:13:12.132Z",
+  "updatedAt": "2025-03-23T20:13:46.227Z",
+  "planData": {
+    "age": 65,
+    "retirementAge": 65,
+    "lifeExpectancy": 90,
+    "hasSpouse": false,
+    "currentRSP": 0,
+    "currentTFSA": 0,
+    "currentOtherInvestments": 0,
+    "employmentIncome": 0,
+    "otherIncome": [],
+    "expectedCPP": {
+      "at60": 0,
+      "at65": 0,
+      "at70": 0
+    },
+    "expectedOAS": {
+      "at65": 0,
+      "at70": 0
+    },
+    "currentAnnualExpenses": 0,
+    "retirementAnnualExpenses": 0,
+    "inflationRate": 2,
+    "rspGrowthRate": 5,
+    "tfsaGrowthRate": 5,
+    "otherInvestmentsGrowthRate": 5
+  }
+}

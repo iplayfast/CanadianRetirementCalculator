@@ -1,0 +1,118 @@
+.
+├── badplan_retirement_plan.json
+├── ChrisRaina_retirement_plan.json
+├── directorylayout.txt
+├── docs
+│   ├── Bugs.md
+│   ├── capital_gains_tax.md
+│   ├── government_benefits.md
+│   ├── income_tax_rates.md
+│   ├── optimization-strategy-analysis.md
+│   ├── rrsp_research.md
+│   ├── tfsa_research.md
+│   └── todo.md
+├── fix.py
+├── implement-strategy-pattern.js
+├── index.html
+├── package.json
+├── package-lock.json
+├── public
+│   ├── assets
+│   │   └── images
+│   ├── favicon.ico
+│   ├── index.html
+│   ├── logo192.png
+│   ├── logo512.png
+│   ├── manifest.json
+│   └── robots.txt
+├── readem.txt
+├── README.md
+├── src
+│   ├── App-debug.tsx
+│   ├── App.tsx
+│   ├── components
+│   │   ├── charts
+│   │   │   ├── NarrativeBreakdown.tsx
+│   │   │   ├── RetirementCharts.tsx
+│   │   │   └── YearlyBreakdown.tsx
+│   │   ├── forms
+│   │   │   └── InputForm
+│   │   │       ├── BenefitsStep.tsx
+│   │   │       ├── ExpensesStep.tsx
+│   │   │       ├── ExtraIncomeStep.tsx
+│   │   │       ├── IncomeStep.tsx
+│   │   │       ├── PersonalInfoStep.tsx
+│   │   │       ├── PrimaryPersonStep.tsx
+│   │   │       ├── RatesStep.tsx
+│   │   │       ├── ReviewStep.tsx
+│   │   │       ├── SaveButton.tsx
+│   │   │       ├── SavingsStep.tsx
+│   │   │       ├── SpouseBenefitsStep.tsx
+│   │   │       └── SpouseInfoStep.tsx
+│   │   └── ui
+│   │       ├── Card.tsx
+│   │       ├── Footer.tsx
+│   │       ├── Header.tsx
+│   │       ├── HintBox.tsx
+│   │       ├── Layout.tsx
+│   │       ├── LoadPlanDialog.tsx
+│   │       ├── SavePlanDialog.tsx
+│   │       ├── Stepper.tsx
+│   │       ├── StorageSettings.tsx
+│   │       └── StrategyDescription.tsx
+│   ├── constants
+│   │   ├── optimizationStrategies.ts
+│   │   ├── provincialTaxRates.ts
+│   │   └── taxConstants.ts
+│   ├── debug
+│   │   └── optimizer-debug.ts
+│   ├── hooks
+│   │   ├── useForm.ts
+│   │   └── useRetirementCalculator.ts
+│   ├── index.tsx
+│   ├── main.tsx
+│   ├── models
+│   │   └── types.ts
+│   ├── pages
+│   │   ├── BenefitsStep.tsx.old
+│   │   ├── Dashboard.tsx
+│   │   ├── InputForm.tsx
+│   │   └── Results.tsx
+│   ├── reportWebVitals.ts
+│   ├── router.tsx
+│   ├── services
+│   │   ├── retirement
+│   │   │   ├── benefitCalculator.ts
+│   │   │   ├── retirementCalculator.ts
+│   │   │   ├── rspContributionCalculator.ts
+│   │   │   ├── taxCalculator.ts
+│   │   │   ├── withdrawalStrategies
+│   │   │   │   ├── balancedStrategy.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── maxEndWorthStrategy.ts
+│   │   │   │   ├── spendItAllStrategy.ts
+│   │   │   │   ├── strategyInterface.ts
+│   │   │   │   └── taxEfficientStrategy.ts
+│   │   │   └── yearlyCalculator.ts
+│   │   ├── retirementOptimizer.ts
+│   │   ├── rrif-min-withdrawal.ts
+│   │   ├── saveLoadService.ts
+│   │   └── storageProviders.ts
+│   ├── styles
+│   │   ├── global.css
+│   │   └── theme.ts
+│   ├── tests
+│   │   ├── Dashboard.test.tsx
+│   │   ├── mocks
+│   │   │   ├── retirementCalculator.ts
+│   │   │   ├── retirementOptimizer.ts
+│   │   │   └── taxConstants.ts
+│   │   ├── retirementCalculator.test.ts
+│   │   └── retirementOptimizer.test.ts
+│   └── utils
+│       ├── formatters.ts
+│       └── validators.ts
+├── tsconfig.json
+└── vite.config.ts
+
+23 directories, 93 files

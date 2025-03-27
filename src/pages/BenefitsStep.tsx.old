@@ -1,0 +1,163 @@
+import React from 'react';
+import { 
+  Grid, 
+  Typography, 
+  TextField,
+  InputAdornment,
+  Alert
+} from '@mui/material';
+import { UserInput } from '../../../models/types';
+
+interface BenefitsStepProps {
+  userInput: UserInput;
+  onInputChange: (field: keyof UserInput, value: any) => void;
+  onNestedInputChange: (parent: keyof UserInput, field: string, value: any) => void;
+}
+
+const BenefitsStep: React.FC<BenefitsStepProps> = ({ 
+  userInput, 
+  onInputChange, 
+  onNestedInputChange 
+}) => {
+  const currentAge = userInput.age || 0;
+  const isPastAge60 = currentAge >= 60;
+  const isPastAge65 = currentAge >= 65;
+  const isPastAge70 = currentAge >= 70;
+
+  return (
+    <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <Typography variant="h6">Government Benefits</Typography>
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+          Enter your expected CPP and OAS benefits at different claiming ages
+        </Typography>
+      </Grid>
+      
+      {isPastAge70 && (
+        <Grid item xs={12}>
+          <Alert severity="info">
+            2Since you are already 70 or older, we'll use your current government benefits for calculations.
+          </Alert>
+        </Grid>
+      )}
+
+      {!isPastAge70 && (
+        <>
+          <Grid item xs={12}>
+            <Typography variant="subtitle1">CPP Benefits</Typography>
+          </Grid>
+          
+          {!isPastAge60 && (
+            <Grid item xs={12} md={isPastAge65 ? 6 : 4}>
+              <TextField
+                fullWidth
+                label="CPP at Age 60"
+                type="number"
+                value={userInput.expectedCPP.at60}
+                onChange={(e) => onNestedInputChange('expectedCPP', 'at60', parseFloat(e.target.value))}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                }}
+              />
+            </Grid>
+          )}
+          
+          {!isPastAge65 && (
+            <Grid item xs={12} md={isPastAge60 ? (isPastAge65 ? 12 : 6) : 4}>
+              <TextField
+                fullWidth
+                label="CPP at Age 65"
+                type="number"
+                value={userInput.expectedCPP.at65}
+                onChange={(e) => onNestedInputChange('expectedCPP', 'at65', parseFloat(e.target.value))}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                }}
+              />
+            </Grid>
+          )}
+          
+          <Grid item xs={12} md={isPastAge60 ? (isPastAge65 ? 12 : 6) : 4}>
+            <TextField
+              fullWidth
+              label="CPP at Age 70"
+              type="number"
+              value={userInput.expectedCPP.at70}
+              onChange={(e) => onNestedInputChange('expectedCPP', 'at70', parseFloat(e.target.value))}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+              }}
+            />
+          </Grid>
+          
+          {isPastAge60 && !isPastAge65 && (
+            <Grid item xs={12}>
+              <Alert severity="info">
+                Since you are already past age 60, we're only asking for benefits at age 65 and 70.
+              </Alert>
+            </Grid>
+          )}
+          
+          {isPastAge65 && !isPastAge70 && (
+            <Grid item xs={12}>
+              <Alert severity="info">
+                Since you are already past age 65, we're only asking for benefits at age 70.
+              </Alert>
+            </Grid>
+          )}
+          
+          {!isPastAge70 && (
+            <>
+              <Grid item xs={12}>
+                <Typography variant="subtitle1">OAS Benefits</Typography>
+              </Grid>
+              
+              {!isPastAge65 && (
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="OAS at Age 65"
+                    type="number"
+                    value={userInput.expectedOAS.at65}
+                    onChange={(e) => onNestedInputChange('expectedOAS', 'at65', parseFloat(e.target.value))}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                      endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                    }}
+                  />
+                </Grid>
+              )}
+              
+              <Grid item xs={12} md={isPastAge65 ? 12 : 6}>
+                <TextField
+                  fullWidth
+                  label="OAS at Age 70"
+                  type="number"
+                  value={userInput.expectedOAS.at70}
+                  onChange={(e) => onNestedInputChange('expectedOAS', 'at70', parseFloat(e.target.value))}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                  }}
+                />
+              </Grid>
+              
+              {isPastAge65 && !isPastAge70 && (
+                <Grid item xs={12}>
+                  <Alert severity="info">
+                    Since you are already past age 65, we're only asking for OAS at age 70.
+                  </Alert>
+                </Grid>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </Grid>
+  );
+};
+
+export default BenefitsStep;

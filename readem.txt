@@ -1,0 +1,3 @@
+npn run dev
+
+node implement-strategy-pattern.js
