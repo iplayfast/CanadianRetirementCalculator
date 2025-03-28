@@ -1,21 +1,37 @@
+// src/router.tsx
 import React from 'react';
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Outlet } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import InputForm from './pages/InputForm';
 import Results from './pages/Results';
 
+// Root layout component
+const RootLayout = () => {
+  return (
+    <div className="content-container">
+      <Outlet />
+    </div>
+  );
+};
+
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <Dashboard />,
-  },
-  {
-    path: '/input',
-    element: <InputForm />,
-  },
-  {
-    path: '/results',
-    element: <Results />,
+    element: <RootLayout />,
+    children: [
+      {
+        index: true,
+        element: <Dashboard />,
+      },
+      {
+        path: 'input',
+        element: <InputForm />,
+      },
+      {
+        path: 'results',
+        element: <Results />,
+      },
+    ],
   },
 ]);
 

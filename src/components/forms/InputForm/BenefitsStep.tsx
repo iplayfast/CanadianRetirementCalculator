@@ -1,5 +1,5 @@
 // src/components/forms/InputForm/BenefitsStep.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   Grid, 
   Typography, 
@@ -7,10 +7,13 @@ import {
   InputAdornment,
   Alert,
   Paper,
-  Box,
   Divider,
-  FormControlLabel,
-  Checkbox
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+  Box
 } from '@mui/material';
 import { UserInput } from '../../../models/types';
 
@@ -25,406 +28,172 @@ const BenefitsStep: React.FC<BenefitsStepProps> = ({
   onInputChange, 
   onNestedInputChange 
 }) => {
-  // Get names for primary and spouse
-  const primaryName = userInput.name || 'Your';
-  const spouseName = userInput.hasSpouse && userInput.spouseInfo ? (userInput.spouseInfo.name || 'Spouse\'s') : 'Spouse\'s';
+  // Set default benefit start ages if not provided
+  useEffect(() => {
+    // Default primary person benefit start ages
+    if (!userInput.isCollectingCPP && userInput.cppStartAge === undefined) {
+      onInputChange('cppStartAge', 65);
+    }
+    if (!userInput.isCollectingOAS && userInput.oasStartAge === undefined) {
+      onInputChange('oasStartAge', 65);
+    }
+    
+    // Default spouse benefit start ages if spouse exists
+    if (userInput.hasSpouse && userInput.spouseInfo) {
+      const updatedSpouseInfo = { ...userInput.spouseInfo };
+      let needsUpdate = false;
+      
+      if (!updatedSpouseInfo.isCollectingCPP && updatedSpouseInfo.cppStartAge === undefined) {
+        updatedSpouseInfo.cppStartAge = 65;
+        needsUpdate = true;
+      }
+      if (!updatedSpouseInfo.isCollectingOAS && updatedSpouseInfo.oasStartAge === undefined) {
+        updatedSpouseInfo.oasStartAge = 65;
+        needsUpdate = true;
+      }
+      
+      if (needsUpdate) {
+        onInputChange('spouseInfo', updatedSpouseInfo);
+      }
+    }
+  }, []);
 
-
-  // Utility function to determine benefits details
-  
-  const getBenefitsDetails = (
-    currentAge: number, 
-    isCollecting: boolean, 
-    currentAmount: number | undefined, 
-    expectedBenefits: { at60: number; at65: number; at70: number },
-    type: 'CPP' | 'OAS'
-  ) => {
-    const isPastAge60 = currentAge >= 60;
-    const isPastAge65 = currentAge >= 65;
-    const isPastAge70 = currentAge >= 70;
-
-    return {
-      currentAge,
-      isPastAge60,
-      isPastAge65,
-      isPastAge70,
-      isCollecting,
-      currentAmount,
-      expectedBenefits,
-      type
-    };
-  };
-
-  // Prepare benefits details
-  const primaryPersonCPPDetails = getBenefitsDetails(
-    userInput.age, 
-    userInput.isCollectingCPP || false, 
-    userInput.currentCPP, 
-    userInput.expectedCPP,
-    'CPP'
-  );
-
-  const primaryPersonOASDetails = getBenefitsDetails(
-    userInput.age, 
-    userInput.isCollectingOAS || false, 
-    userInput.currentOAS, 
-    userInput.expectedOAS,
-    'OAS'
-  );
-
-  // Spouse benefits details (if applicable)
-  const spouseCPPDetails = userInput.hasSpouse && userInput.spouseInfo 
-    ? getBenefitsDetails(
-        userInput.spouseInfo.age, 
-        userInput.spouseInfo.isCollectingCPP || false, 
-        userInput.spouseInfo.currentCPP, 
-        userInput.spouseInfo.expectedCPP,
-        'CPP'
-      )
-    : null;
-
-  const spouseOASDetails = userInput.hasSpouse && userInput.spouseInfo
-    ? getBenefitsDetails(
-        userInput.spouseInfo.age, 
-        userInput.spouseInfo.isCollectingOAS || false, 
-        userInput.spouseInfo.currentOAS, 
-        userInput.spouseInfo.expectedOAS,
-        'OAS'
-      )
-    : null;
-
-  // Render benefits section for a specific person and benefit type
-  const renderBenefitsSection = (
-    details: ReturnType<typeof getBenefitsDetails>, 
-    personType: 'primary' | 'spouse',
-    onCollectingChange: (collecting: boolean) => void,
-    onCurrentAmountChange: (amount: number) => void,
-    onExpectedAmountChange: (age: number, amount: number) => void
-  ) => {
-    const { 
-      currentAge,
-      isPastAge60, 
-      isPastAge65, 
-      isPastAge70, 
-      isCollecting, 
-      currentAmount, 
-      expectedBenefits,
-      type 
-    } = details;
-
-    const personName = personType === 'primary' ? primaryName : spouseName;
-
-    return (
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Typography variant="subtitle1">{personName} {type} Benefits</Typography>
-        </Grid>
-
-        {/* Collection Status */}
-        <Grid item xs={12}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={isCollecting}
-                onChange={(e) => onCollectingChange(e.target.checked)}
-              />
-            }
-            label={`${personName === 'Your' ? 'You are' : personName === 'Spouse\'s' ? `${personName} is` : `${personName} is`} Currently Collecting ${type}`}
-          />
-        </Grid>
-
-        {/* Current Amount for Collecting Benefits */}
-        {isCollecting && (
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label={`Current Monthly ${type} Amount`}
-              type="number"
-              value={currentAmount || 0}
-              onChange={(e) => onCurrentAmountChange(parseFloat(e.target.value))}
-              InputProps={{
-                startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-              }}
-            />
-          </Grid>
-        )}
-
-        {/* Expected Benefits for Non-Collecting Status */}
-        {!isCollecting && (
-          <>
-            {/* CPP benefits */}
-            {type === 'CPP' && (
-              <>
-                {/* User under 60 - show all standard options */}
-                {!isPastAge60 && (
-                  <>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="CPP at Age 60"
-                        type="number"
-                        value={expectedBenefits.at60}
-                        onChange={(e) => onExpectedAmountChange(60, parseFloat(e.target.value))}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                    
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="CPP at Age 65"
-                        type="number"
-                        value={expectedBenefits.at65}
-                        onChange={(e) => onExpectedAmountChange(65, parseFloat(e.target.value))}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                    
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="CPP at Age 70"
-                        type="number"
-                        value={expectedBenefits.at70}
-                        onChange={(e) => onExpectedAmountChange(70, parseFloat(e.target.value))}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                  </>
-                )}
-                
-                {/* User between 60-65 */}
-                {isPastAge60 && !isPastAge65 && (
-                  <>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label={`CPP at Current Age (${currentAge})`}
-                        type="number"
-                        value={currentAmount || 0}
-                        onChange={(e) => onCurrentAmountChange(parseFloat(e.target.value))}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                    
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="CPP at Age 65"
-                        type="number"
-                        value={expectedBenefits.at65}
-                        onChange={(e) => onExpectedAmountChange(65, parseFloat(e.target.value))}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                    
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="CPP at Age 70"
-                        type="number"
-                        value={expectedBenefits.at70}
-                        onChange={(e) => onExpectedAmountChange(70, parseFloat(e.target.value))}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                  </>
-                )}
-                
-                {/* User between 65-70 */}
-                {isPastAge65 && !isPastAge70 && (
-                  <>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label={`CPP at Current Age (${currentAge})`}
-                        type="number"
-                        value={currentAmount || 0}
-                        onChange={(e) => onCurrentAmountChange(parseFloat(e.target.value))}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="CPP at Age 70"
-                        type="number"
-                        value={expectedBenefits.at70}
-                        onChange={(e) => onExpectedAmountChange(70, parseFloat(e.target.value))}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                  </>
-                )}
-                
-                {/* User 70 or older */}
-                {isPastAge70 && (
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label={`CPP at Current Age (${currentAge})`}
-                      type="number"
-                      value={currentAmount || 0}
-                      onChange={(e) => onCurrentAmountChange(parseFloat(e.target.value))}
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                        endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                      }}
-                    />
-                  </Grid>
-                )}
-              </>
-            )}
-            
-            {/* OAS benefits */}
-            {type === 'OAS' && (
-              <>
-                {/* User under 65 - show standard options */}
-                {!isPastAge65 && (
-                  <>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="OAS at Age 65"
-                        type="number"
-                        value={expectedBenefits.at65}
-                        onChange={(e) => onExpectedAmountChange(65, parseFloat(e.target.value))}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="OAS at Age 70"
-                        type="number"
-                        value={expectedBenefits.at70}
-                        onChange={(e) => onExpectedAmountChange(70, parseFloat(e.target.value))}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                  </>
-                )}
-                
-                {/* User between 65-70 */}
-                {isPastAge65 && !isPastAge70 && (
-                  <>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label={`OAS at Current Age (${currentAge})`}
-                        type="number"
-                        value={currentAmount || 0}
-                        onChange={(e) => onCurrentAmountChange(parseFloat(e.target.value))}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="OAS at Age 70"
-                        type="number"
-                        value={expectedBenefits.at70}
-                        onChange={(e) => onExpectedAmountChange(70, parseFloat(e.target.value))}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                  </>
-                )}
-                
-                {/* User 70 or older */}
-                {isPastAge70 && (
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label={`OAS at Current Age (${currentAge})`}
-                      type="number"
-                      value={currentAmount || 0}
-                      onChange={(e) => onCurrentAmountChange(parseFloat(e.target.value))}
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                        endAdornment: <InputAdornment position="end">/month</InputAdornment>,
-                      }}
-                    />
-                  </Grid>
-                )}
-              </>
-            )}
-          </>
-        )}
-        
-        {/* Help messages for different age groups */}
-        {!isCollecting && (
-          <>
-            {isPastAge60 && !isPastAge65 && type === 'CPP' && (
-              <Grid item xs={12}>
-                <Alert severity="info">
-                  Since you are between ages 60-65, we're asking for your current CPP estimates and expected future benefits at ages 65 and 70.
-                </Alert>
-              </Grid>
-            )}
-            
-            {isPastAge65 && !isPastAge70 && (
-              <Grid item xs={12}>
-                <Alert severity="info">
-                  Since you are between ages 65-70, we're asking for your current {type} estimates and expected benefits at age 70.
-                </Alert>
-              </Grid>
-            )}
-            
-            {isPastAge70 && (
-              <Grid item xs={12}>
-                <Alert severity="info">
-                  Since you are 70 or older, we're only asking for your current {type} amount.
-                </Alert>
-              </Grid>
-            )}
-          </>
-        )}
-      </Grid>
+  // Generate age options for dropdowns based on benefit type
+  const generateAgeOptions = (minAge: number, currentAge: number) => {
+    const options = [];
+    
+    options.push(
+      <MenuItem key="currently-collecting" value="currently-collecting">
+        Currently Collecting
+      </MenuItem>
     );
+    
+    for (let age = Math.max(minAge, currentAge); age <= 70; age++) {
+      options.push(
+        <MenuItem key={`age-${age}`} value={age}>
+          Age {age}
+        </MenuItem>
+      );
+    }
+    
+    options.push(
+      <MenuItem key="do-not-qualify" value="do-not-qualify">
+        Do Not Qualify
+      </MenuItem>
+    );
+    
+    return options;
   };
 
-  // Return the full benefits section
+  // Common handler for benefit start age changes
+  const handleBenefitStartAgeChange = (
+    isCollectingField: keyof UserInput | string,
+    startAgeField: keyof UserInput | string,
+    value: string | number,
+    isSpouse: boolean = false
+  ) => {
+    if (isSpouse && userInput.spouseInfo) {
+      // Handle spouse benefit start age change
+      const updatedSpouseInfo = { ...userInput.spouseInfo };
+      
+      if (value === 'currently-collecting') {
+        updatedSpouseInfo[isCollectingField as keyof typeof updatedSpouseInfo] = true;
+      } else if (value === 'do-not-qualify') {
+        updatedSpouseInfo[isCollectingField as keyof typeof updatedSpouseInfo] = false;
+        updatedSpouseInfo[startAgeField as keyof typeof updatedSpouseInfo] = undefined;
+      } else {
+        updatedSpouseInfo[isCollectingField as keyof typeof updatedSpouseInfo] = false;
+        updatedSpouseInfo[startAgeField as keyof typeof updatedSpouseInfo] = Number(value);
+      }
+      
+      onInputChange('spouseInfo', updatedSpouseInfo);
+    } else {
+      // Handle primary person benefit start age change
+      if (value === 'currently-collecting') {
+        onInputChange(isCollectingField as keyof UserInput, true);
+      } else if (value === 'do-not-qualify') {
+        onInputChange(isCollectingField as keyof UserInput, false);
+        onInputChange(startAgeField as keyof UserInput, undefined);
+      } else {
+        onInputChange(isCollectingField as keyof UserInput, false);
+        onInputChange(startAgeField as keyof UserInput, Number(value));
+      }
+    }
+  };
+
+  // Handlers for primary person's benefit ages
+  const handleCPPStartAgeChange = (event: SelectChangeEvent) => {
+    handleBenefitStartAgeChange('isCollectingCPP', 'cppStartAge', event.target.value);
+  };
+
+  const handleOASStartAgeChange = (event: SelectChangeEvent) => {
+    handleBenefitStartAgeChange('isCollectingOAS', 'oasStartAge', event.target.value);
+  };
+
+  // Handlers for spouse's benefit ages
+  const handleSpouseCPPStartAgeChange = (event: SelectChangeEvent) => {
+    handleBenefitStartAgeChange('isCollectingCPP', 'cppStartAge', event.target.value, true);
+  };
+
+  const handleSpouseOASStartAgeChange = (event: SelectChangeEvent) => {
+    handleBenefitStartAgeChange('isCollectingOAS', 'oasStartAge', event.target.value, true);
+  };
+
+  // Reusable benefit start age selector component
+  const BenefitStartAgeSelector = ({
+    label,
+    isCollecting,
+    startAge,
+    minAge,
+    currentAge,
+    onChange
+  }: {
+    label: string;
+    isCollecting: boolean;
+    startAge?: number;
+    minAge: number;
+    currentAge: number;
+    onChange: (event: SelectChangeEvent) => void;
+  }) => (
+    <FormControl fullWidth>
+      <InputLabel>{label}</InputLabel>
+      <Select
+        value={isCollecting ? 'currently-collecting' : (startAge || 'do-not-qualify')}
+        label={label}
+        onChange={onChange}
+      >
+        {generateAgeOptions(minAge, currentAge)}
+      </Select>
+    </FormControl>
+  );
+
+  // Helper to handle spouse nested object updates
+  const handleSpouseFieldUpdate = (field: string, value: any) => {
+    if (!userInput.spouseInfo) return;
+    
+    const updatedSpouseInfo = {
+      ...userInput.spouseInfo,
+      [field]: value
+    };
+    
+    onInputChange('spouseInfo', updatedSpouseInfo);
+  };
+
+  // Helper to handle spouse nested object with nested property updates
+  const handleSpouseNestedUpdate = (parentField: string, field: string, value: any) => {
+    if (!userInput.spouseInfo) return;
+    
+    const updatedSpouseInfo = {
+      ...userInput.spouseInfo,
+      [parentField]: {
+        ...userInput.spouseInfo[parentField as keyof typeof userInput.spouseInfo] as Record<string, any>,
+        [field]: value
+      }
+    };
+    
+    onInputChange('spouseInfo', updatedSpouseInfo);
+  };
+
   return (
     <Grid container spacing={3}>
       <Grid item xs={12}>
@@ -434,127 +203,314 @@ const BenefitsStep: React.FC<BenefitsStepProps> = ({
         </Typography>
       </Grid>
 
+      {/* PRIMARY PERSON CPP */}
       <Grid item xs={12}>
         <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-          {renderBenefitsSection(
-            primaryPersonCPPDetails,
-            'primary',
-            (collecting) => onInputChange('isCollectingCPP', collecting),
-            (amount) => onInputChange('currentCPP', amount),
-            (age, amount) => {
-              switch(age) {
-                case 60:
-                  onNestedInputChange('expectedCPP', 'at60', amount);
-                  break;
-                case 65:
-                  onNestedInputChange('expectedCPP', 'at65', amount);
-                  break;
-                case 70:
-                  onNestedInputChange('expectedCPP', 'at70', amount);
-                  break;
-              }
-            }
-          )}
+          <Typography variant="subtitle1">Your CPP Benefits</Typography>
+          
+          <Grid container spacing={3}>
+            {/* CPP Start Age Dropdown */}
+            <Grid item xs={12}>
+              <BenefitStartAgeSelector
+                label="CPP Start Age"
+                isCollecting={userInput.isCollectingCPP}
+                startAge={userInput.cppStartAge}
+                minAge={60}
+                currentAge={userInput.age}
+                onChange={handleCPPStartAgeChange}
+              />
+            </Grid>
+            
+            {/* CPP Benefit Amounts */}
+            {userInput.isCollectingCPP ? (
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label={`Current CPP at Age ${userInput.age}`}
+                  type="number"
+                  value={userInput.currentCPP || 0}
+                  onChange={(e) => onInputChange('currentCPP', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                  }}
+                />
+              </Grid>
+            ) : (
+              <>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label="CPP at Age 60"
+                    type="number"
+                    value={userInput.expectedCPP.at60}
+                    onChange={(e) => onNestedInputChange('expectedCPP', 'at60', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                      endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label="CPP at Age 65"
+                    type="number"
+                    value={userInput.expectedCPP.at65}
+                    onChange={(e) => onNestedInputChange('expectedCPP', 'at65', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                      endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label="CPP at Age 70"
+                    type="number"
+                    value={userInput.expectedCPP.at70}
+                    onChange={(e) => onNestedInputChange('expectedCPP', 'at70', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                      endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                    }}
+                  />
+                </Grid>
+              </>
+            )}
+          </Grid>
         </Paper>
       </Grid>
 
+      {/* PRIMARY PERSON OAS */}
       <Grid item xs={12}>
         <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-          {renderBenefitsSection(
-            primaryPersonOASDetails,
-            'primary',
-            (collecting) => onInputChange('isCollectingOAS', collecting),
-            (amount) => onInputChange('currentOAS', amount),
-            (age, amount) => {
-              switch(age) {
-                case 65:
-                  onNestedInputChange('expectedOAS', 'at65', amount);
-                  break;
-                case 70:
-                  onNestedInputChange('expectedOAS', 'at70', amount);
-                  break;
-              }
-            }
-          )}
+          <Typography variant="subtitle1">Your OAS Benefits</Typography>
+          
+          <Grid container spacing={3}>
+            {/* OAS Start Age Dropdown */}
+            <Grid item xs={12}>
+              <BenefitStartAgeSelector
+                label="OAS Start Age"
+                isCollecting={userInput.isCollectingOAS}
+                startAge={userInput.oasStartAge}
+                minAge={65}
+                currentAge={userInput.age}
+                onChange={handleOASStartAgeChange}
+              />
+            </Grid>
+            
+            {/* OAS Benefit Amounts */}
+            {userInput.isCollectingOAS ? (
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label={`Current OAS at Age ${userInput.age}`}
+                  type="number"
+                  value={userInput.currentOAS || 0}
+                  onChange={(e) => onInputChange('currentOAS', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                  }}
+                />
+              </Grid>
+            ) : (
+              <>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="OAS at Age 65"
+                    type="number"
+                    value={userInput.expectedOAS.at65}
+                    onChange={(e) => onNestedInputChange('expectedOAS', 'at65', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                      endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="OAS at Age 70"
+                    type="number"
+                    value={userInput.expectedOAS.at70}
+                    onChange={(e) => onNestedInputChange('expectedOAS', 'at70', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                      endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                    }}
+                  />
+                </Grid>
+              </>
+            )}
+          </Grid>
         </Paper>
       </Grid>
 
-      {/* Spouse Benefits Section - Only render if spouse is included */}
+      {/* SPOUSE BENEFITS SECTION */}
       {userInput.hasSpouse && userInput.spouseInfo && (
         <>
-
+          <Grid item xs={12}>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="h6">Spouse Government Benefits</Typography>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Enter your spouse's government benefits and expected or current amounts
+            </Typography>
+          </Grid>
+          
+          {/* Spouse CPP */}
           <Grid item xs={12}>
             <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-              {renderBenefitsSection(
-                spouseCPPDetails!,
-                'spouse',
-                (collecting) => onInputChange('spouseInfo', {
-                  ...userInput.spouseInfo!,
-                  isCollectingCPP: collecting
-                }),
-                (amount) => onInputChange('spouseInfo', {
-                  ...userInput.spouseInfo!,
-                  currentCPP: amount
-                }),
-                (age, amount) => {
-                  const updatedExpectedCPP = {
-                    ...userInput.spouseInfo!.expectedCPP
-                  };
-                  
-                  switch(age) {
-                    case 60:
-                      updatedExpectedCPP.at60 = amount;
-                      break;
-                    case 65:
-                      updatedExpectedCPP.at65 = amount;
-                      break;
-                    case 70:
-                      updatedExpectedCPP.at70 = amount;
-                      break;
-                  }
-                  
-                  onInputChange('spouseInfo', {
-                    ...userInput.spouseInfo!,
-                    expectedCPP: updatedExpectedCPP
-                  });
-                }
-              )}
+              <Typography variant="subtitle1">Spouse's CPP Benefits</Typography>
+              
+              <Grid container spacing={3}>
+                {/* Spouse CPP Start Age Dropdown */}
+                <Grid item xs={12}>
+                  <BenefitStartAgeSelector
+                    label="Spouse's CPP Start Age"
+                    isCollecting={userInput.spouseInfo.isCollectingCPP}
+                    startAge={userInput.spouseInfo.cppStartAge}
+                    minAge={60}
+                    currentAge={userInput.spouseInfo.age}
+                    onChange={handleSpouseCPPStartAgeChange}
+                  />
+                </Grid>
+                
+                {/* Spouse CPP Benefit Amounts */}
+                {userInput.spouseInfo.isCollectingCPP ? (
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label={`Current CPP at Age ${userInput.spouseInfo.age}`}
+                      type="number"
+                      value={userInput.spouseInfo.currentCPP || 0}
+                      onChange={(e) => handleSpouseFieldUpdate('currentCPP', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                        endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                      }}
+                    />
+                  </Grid>
+                ) : (
+                  <>
+                    <Grid item xs={12} md={4}>
+                      <TextField
+                        fullWidth
+                        label="CPP at Age 60"
+                        type="number"
+                        value={userInput.spouseInfo.expectedCPP.at60}
+                        onChange={(e) => handleSpouseNestedUpdate('expectedCPP', 'at60', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                        }}
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12} md={4}>
+                      <TextField
+                        fullWidth
+                        label="CPP at Age 65"
+                        type="number"
+                        value={userInput.spouseInfo.expectedCPP.at65}
+                        onChange={(e) => handleSpouseNestedUpdate('expectedCPP', 'at65', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                        }}
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12} md={4}>
+                      <TextField
+                        fullWidth
+                        label="CPP at Age 70"
+                        type="number"
+                        value={userInput.spouseInfo.expectedCPP.at70}
+                        onChange={(e) => handleSpouseNestedUpdate('expectedCPP', 'at70', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                        }}
+                      />
+                    </Grid>
+                  </>
+                )}
+              </Grid>
             </Paper>
           </Grid>
 
+          {/* Spouse OAS */}
           <Grid item xs={12}>
-            <Paper elevation={2} sx={{ p: 3 }}>
-              {renderBenefitsSection(
-                spouseOASDetails!,
-                'spouse',
-                (collecting) => onInputChange('spouseInfo', {
-                  ...userInput.spouseInfo!,
-                  isCollectingOAS: collecting
-                }),
-                (amount) => onInputChange('spouseInfo', {
-                  ...userInput.spouseInfo!,
-                  currentOAS: amount
-                }),
-                (age, amount) => {
-                  const updatedExpectedOAS = {
-                    ...userInput.spouseInfo!.expectedOAS
-                  };
-                  
-                  switch(age) {
-                    case 65:
-                      updatedExpectedOAS.at65 = amount;
-                      break;
-                    case 70:
-                      updatedExpectedOAS.at70 = amount;
-                      break;
-                  }
-                  
-                  onInputChange('spouseInfo', {
-                    ...userInput.spouseInfo!,
-                    expectedOAS: updatedExpectedOAS
-                  });
-                }
-              )}
+            <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+              <Typography variant="subtitle1">Spouse's OAS Benefits</Typography>
+              
+              <Grid container spacing={3}>
+                {/* OAS Start Age Dropdown for Spouse */}
+                <Grid item xs={12}>
+                  <BenefitStartAgeSelector
+                    label="Spouse's OAS Start Age"
+                    isCollecting={userInput.spouseInfo.isCollectingOAS}
+                    startAge={userInput.spouseInfo.oasStartAge}
+                    minAge={65}
+                    currentAge={userInput.spouseInfo.age}
+                    onChange={handleSpouseOASStartAgeChange}
+                  />
+                </Grid>
+                
+                {/* Spouse OAS Benefit Amounts */}
+                {userInput.spouseInfo.isCollectingOAS ? (
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label={`Current OAS at Age ${userInput.spouseInfo.age}`}
+                      type="number"
+                      value={userInput.spouseInfo.currentOAS || 0}
+                      onChange={(e) => handleSpouseFieldUpdate('currentOAS', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                        endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                      }}
+                    />
+                  </Grid>
+                ) : (
+                  <>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="OAS at Age 65"
+                        type="number"
+                        value={userInput.spouseInfo.expectedOAS.at65}
+                        onChange={(e) => handleSpouseNestedUpdate('expectedOAS', 'at65', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                        }}
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="OAS at Age 70"
+                        type="number"
+                        value={userInput.spouseInfo.expectedOAS.at70}
+                        onChange={(e) => handleSpouseNestedUpdate('expectedOAS', 'at70', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                          endAdornment: <InputAdornment position="end">/month</InputAdornment>,
+                        }}
+                      />
+                    </Grid>
+                  </>
+                )}
+              </Grid>
             </Paper>
           </Grid>
         </>

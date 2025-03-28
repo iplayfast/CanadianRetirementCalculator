@@ -385,54 +385,66 @@ export function calculateYearlyPlan(
   const totalNetWorth = rspBalance + tfsaBalance + otherInvestmentsBalance +
                         spouseRspBalance + spouseTfsaBalance + spouseOtherInvestmentsBalance;
 
-  
-  // Prepare yearly plan
-  const yearlyPlan: YearlyPlan = {
-    age: currentAge,
-    year: new Date().getFullYear() + (currentAge - userInput.age),
-    isRetired,
-    employmentIncome,
-    cppIncome,
-    oasIncome,
-    rspWithdrawal: withdrawals.rspWithdrawal,
-    tfsaWithdrawal: withdrawals.tfsaWithdrawal,
-    otherInvestmentsWithdrawal: withdrawals.otherInvestmentsWithdrawal,
-    extraIncome,
-    spouseAge,
-    spouseIsRetired: isSpouseRetired,
-    spouseEmploymentIncome,
-    spouseCppIncome,
-    spouseOasIncome,
-    spouseRspWithdrawal: withdrawals.spouseRspWithdrawal,
-    spouseTfsaWithdrawal: withdrawals.spouseTfsaWithdrawal,
-    spouseOtherInvestmentsWithdrawal: withdrawals.spouseOtherInvestmentsWithdrawal,
-    spouseExtraIncome,
-    totalIncome: totalIncome + spouseTotalIncome + totalWithdrawals,
-    expenses,
-    funMoney: funMoney > 0 ? funMoney : undefined,
-    incomeTax,
-    spouseIncomeTax,
-    capitalGainsTax,
-    totalTax,
-    rspContribution,
-    tfsaContribution,
-    otherInvestmentsContribution,
-    spouseRspContribution,
-    spouseTfsaContribution,
-    spouseOtherInvestmentsContribution,
-    rspBalance,
-    tfsaBalance,
-    otherInvestmentsBalance,
-    spouseRspBalance,
-    spouseTfsaBalance,
-    spouseOtherInvestmentsBalance,
-    totalNetWorth
-  };
+  // src/services/retirement/yearlyCalculator.ts
 
+// Based on my review of the yearlyCalculator.ts file, spouseCapitalGainsTax is calculated 
+// but might not be included in the YearlyPlan object.
+
+// Here's the section in yearlyCalculator.ts that needs to be updated:
+
+// When creating the yearlyPlan object, ensure spouseCapitalGainsTax is included:
+
+const yearlyPlan: YearlyPlan = {
+  age: currentAge,
+  year: new Date().getFullYear() + (currentAge - userInput.age),
+  isRetired,
+  employmentIncome,
+  cppIncome,
+  oasIncome,
+  rspWithdrawal: withdrawals.rspWithdrawal,
+  tfsaWithdrawal: withdrawals.tfsaWithdrawal,
+  otherInvestmentsWithdrawal: withdrawals.otherInvestmentsWithdrawal,
+  extraIncome,
+  extraIncomeStreams : userInput.extraIncomeStreams,
+  spouseAge,
+  spouseIsRetired: isSpouseRetired,
+  spouseEmploymentIncome,
+  spouseCppIncome,
+  spouseOasIncome,
+  spouseRspWithdrawal: withdrawals.spouseRspWithdrawal,
+  spouseTfsaWithdrawal: withdrawals.spouseTfsaWithdrawal,
+  spouseOtherInvestmentsWithdrawal: withdrawals.spouseOtherInvestmentsWithdrawal,
+  spouseExtraIncome,
+  spouseInfo: userInput.hasSpouse ? {
+    extraIncomeStreams: userInput.spouseInfo?.extraIncomeStreams || []
+  } : undefined,  
+  totalIncome: totalIncome + spouseTotalIncome + totalWithdrawals,
+  expenses,
+  funMoney: funMoney > 0 ? funMoney : undefined,
+  incomeTax,
+  spouseIncomeTax,
+  capitalGainsTax,
+  spouseCapitalGainsTax, // Add this line if it's missing
+  totalTax,
+  rspContribution,
+  tfsaContribution,
+  otherInvestmentsContribution,
+  spouseRspContribution,
+  spouseTfsaContribution,
+  spouseOtherInvestmentsContribution,
+  rspBalance,
+  tfsaBalance,
+  otherInvestmentsBalance,
+  spouseRspBalance,
+  spouseTfsaBalance,
+  spouseOtherInvestmentsBalance,
+  totalNetWorth
+};
+  
   // Return the yearly plan, updated balances, and updated contribution room
   return {
     yearlyPlan,
-    updatedBalances: {
+    updatedBalances: {  
       rspBalance,
       tfsaBalance,
       otherInvestmentsBalance,

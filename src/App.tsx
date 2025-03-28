@@ -1,10 +1,9 @@
+// src/App.tsx
 import React, { useEffect } from 'react';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
-import InputForm from './pages/InputForm';
-import Results from './pages/Results';
+import { RouterProvider } from 'react-router-dom';
+import router from './router';
 import Header from './components/ui/Header';
 import Footer from './components/ui/Footer';
 import { getStorageProvider } from './services/storageProviders';
@@ -112,19 +111,13 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <div className="App">
-          <Header />
-          <main className="content">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/input" element={<InputForm />} />
-              <Route path="/results" element={<Results />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </Router>
+      <div className="App">
+        <Header />
+        <main className="content">
+          <RouterProvider router={router} />
+        </main>
+        <Footer />
+      </div>
     </ThemeProvider>
   );
 }

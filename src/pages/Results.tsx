@@ -1,9 +1,10 @@
+// src/pages/Results.tsx
 import React, { useState, useEffect } from 'react';
 import { 
   Container, 
   Typography, 
   Paper, 
-  Box, 
+  Box,
   Grid,
   Button,
   Tabs,
@@ -180,8 +181,8 @@ const Results: React.FC = () => {
           <Alert severity="error" sx={{ mb: 3 }}>{initialError}</Alert>
           <Button
             variant="contained"
-            color="primary"
-            onClick={() => navigate('/input')}
+            color="primary"            
+            onClick={() => navigate('/input', { state: { userInput, activeStep: 5 } })}
           >
             Back to Input Form
           </Button>
@@ -341,7 +342,7 @@ const Results: React.FC = () => {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
           <Button
             variant="outlined"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/input', { state: { userInput, activeStep: 5 } })}
           >
             Back to Input
           </Button>

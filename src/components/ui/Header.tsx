@@ -1,17 +1,15 @@
+// src/components/ui/Header.tsx
 import React, { useState } from 'react';
 import { 
   Typography, 
   Box, 
   AppBar, 
   Toolbar, 
-  Container, 
-  Button,
   IconButton,
   Tooltip,
   Menu,
   MenuItem
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HomeIcon from '@mui/icons-material/Home';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -20,7 +18,6 @@ import InfoIcon from '@mui/icons-material/Info';
 import StorageSettings from './StorageSettings';
 
 const Header: React.FC = () => {
-  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [storageDialogOpen, setStorageDialogOpen] = useState(false);
   
@@ -33,7 +30,8 @@ const Header: React.FC = () => {
   };
   
   const handleHomeClick = () => {
-    navigate('/');
+    // Use window.location for navigation instead of useNavigate
+    window.location.href = '/';
   };
   
   const handleStorageSettingsClick = () => {

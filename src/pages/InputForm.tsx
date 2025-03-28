@@ -21,7 +21,7 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import PersonalInfoStep from '../components/forms/InputForm/PersonalInfoStep';
 import SpouseInfoStep from '../components/forms/InputForm/SpouseInfoStep';
 import BenefitsStep from '../components/forms/InputForm/BenefitsStep';
-import ExtraIncomeStep from '../components/forms/InputForm/ExtraIncomeStep'; // New component
+import ExtraIncomeStep from '../components/forms/InputForm/ExtraIncomeStep';
 import RatesStep from '../components/forms/InputForm/RatesStep';
 import ReviewStep from '../components/forms/InputForm/ReviewStep';
 
@@ -68,6 +68,9 @@ const initialUserInput: UserInput = {
     at65: 0,
     at70: 0,
   },
+  
+  cppStartAge: 65,   // Default to standard retirement age
+  oasStartAge: 65,   // Default to standard retirement age
   currentCPP: 0,
   currentOAS: 0,
   // New government benefit status flags
@@ -101,12 +104,18 @@ const InputForm: React.FC = () => {
   // Load user input from location state if available
   useEffect(() => {
     if (location.state?.userInput) {
+      let startage = 65;
+      if (userInput.age > startage)
+        startage = userInput.age;
+
       // Ensure the loaded data has all the required fields
       const loadedInput = {
         ...initialUserInput,
         ...location.state.userInput,
         // Add any missing fields that might not be in older saved plans
         extraIncomeStreams: location.state.userInput.extraIncomeStreams || [],
+        cppStartAge: location.state.userInput.cppStartAge || startage,
+        oasStartAge: location.state.userInput.oasStartAge || startage,
         isCollectingCPP: location.state.userInput.isCollectingCPP || false,
         isCollectingOAS: location.state.userInput.isCollectingOAS || false
       };
@@ -125,6 +134,13 @@ const InputForm: React.FC = () => {
     }
   }, [location.state]);
   
+  useEffect(() => {
+  // Check if we're coming back from Results page with a specific step
+    if (location.state?.activeStep === 5) {
+      setActiveStep(5);
+    }
+  }, [location.state]);
+  
   // Updated steps with new ExtraIncomeStep
   const steps = [
     'Personal Information',
@@ -135,11 +151,370 @@ const InputForm: React.FC = () => {
     'Review'
   ];
 
+  // Helper function to decide if a benefit should be added
+  const shouldAddBenefit = (startAge?: number, isCollecting?: boolean): boolean => {
+    // If currently collecting, definitely add
+    if (isCollecting) {
+      return true;
+    }
+    
+    // If start age is defined (not undefined) and not "do not qualify", add
+    if (startAge !== undefined) {
+      return true;
+    }
+    
+    // Otherwise, don't add
+    return false;
+  };
+
+  // Helper function to remove all government benefit streams
+  const removeGovBenefitStreams = (streams: ExtraIncomeStream[]): ExtraIncomeStream[] => {
+    // IDs for government benefit streams
+    const govBenefitIds = [
+      'primary_cpp_benefit', 'primary_oas_benefit', 
+      'spouse_cpp_benefit', 'spouse_oas_benefit',
+      // Legacy IDs
+      'cpp_benefit', 'oas_benefit'
+    ];
+    
+    // Filter out government benefit streams
+    const filteredStreams = streams.filter(stream => !govBenefitIds.includes(stream.id));
+    
+    console.log(`Removed ${streams.length - filteredStreams.length} government benefit streams`);
+    return filteredStreams;
+  };
+
+  // Function to create a benefit stream
+  const createGovBenefitStream = (
+    id: string,
+    description: string,
+    amount: number,
+    startYear: number,
+    hasInflation: boolean = true
+  ): ExtraIncomeStream | null => {
+    // Only create stream if amount is positive
+    if (amount <= 0) {
+      console.log(`Not adding ${description} - amount is ${amount}`);
+      return null;
+    }
+    
+    const stream: ExtraIncomeStream = {
+      id,
+      description,
+      yearlyAmount: amount * 12, // Convert monthly to yearly
+      startYear,
+      endYear: undefined, // Government benefits continue until death
+      hasInflation
+    };
+    
+    console.log(`Created benefit stream: ${id} - ${description}, $${stream.yearlyAmount}/year starting ${startYear}`);
+    return stream;
+  };
+
+  // Calculate the benefit amount based on age and collecting status
+  const calculateBenefitAmount = (
+    isCollecting: boolean,
+    currentAmount: number,
+    startAge?: number,
+    expectedAmounts?: { at60?: number, at65: number, at70?: number }
+  ): number => {
+    // If currently collecting, use current amount
+    if (isCollecting) {
+      return currentAmount;
+    }
+    
+    // If no start age or no expected amounts, return 0
+    if (startAge === undefined || !expectedAmounts) {
+      return 0;
+    }
+    
+    // Return amount based on start age
+    if (startAge === 60 && expectedAmounts.at60 !== undefined) {
+      return expectedAmounts.at60;
+    } else if (startAge === 65) {
+      return expectedAmounts.at65;
+    } else if (startAge === 70 && expectedAmounts.at70 !== undefined) {
+      return expectedAmounts.at70;
+    } else if (startAge < 65 && expectedAmounts.at60 !== undefined) {
+      // Interpolate between 60 and 65
+      const ratio = (startAge - 60) / 5;
+      return expectedAmounts.at60 + (expectedAmounts.at65 - expectedAmounts.at60) * ratio;
+    } else if (startAge > 65 && expectedAmounts.at70 !== undefined) {
+      // Interpolate between 65 and 70
+      const ratio = (startAge - 65) / 5;
+      return expectedAmounts.at65 + (expectedAmounts.at70 - expectedAmounts.at65) * ratio;
+    }
+    
+    // Default fallback to age 65 amount
+    return expectedAmounts.at65;
+  };
+
+  // Calculate the start year for a benefit
+  const calculateStartYear = (
+    isCollecting: boolean,
+    currentAge: number,
+    startAge?: number
+  ): number => {
+    const currentYear = new Date().getFullYear();
+    
+    // If currently collecting, start in current year
+    if (isCollecting) {
+      return currentYear;
+    }
+    
+    // If no start age, return undefined (shouldn't happen due to prior checks)
+    if (startAge === undefined) {
+      console.warn("Warning: Attempting to calculate start year with undefined start age");
+      return currentYear;
+    }
+    
+    // Calculate years until start age
+    const yearsUntilStartAge = startAge - currentAge;
+    // Only return future year if start age is in the future
+  return yearsUntilStartAge > 0 
+    ? currentYear + yearsUntilStartAge 
+    : currentYear + (startAge - currentAge);
+    
+    
+  };
+
+  // Create primary person's CPP stream
+  const createPrimaryCppStream = (input: UserInput): ExtraIncomeStream | null => {
+    const primaryName = input.name || 'Primary';
+    
+    // Calculate benefit amount
+    const amount = calculateBenefitAmount(
+      input.isCollectingCPP,
+      input.currentCPP || 0,
+      input.cppStartAge,
+      input.expectedCPP
+    );
+    
+    // Calculate start year
+    const startYear = calculateStartYear(
+      input.isCollectingCPP,
+      input.age,
+      input.cppStartAge
+    );
+    
+    // Create stream
+    return createGovBenefitStream(
+      'primary_cpp_benefit',
+      `${primaryName}'s CPP Benefit`,
+      amount,
+      startYear
+    );
+  };
+
+  // Create primary person's OAS stream
+  const createPrimaryOasStream = (input: UserInput): ExtraIncomeStream | null => {
+    const primaryName = input.name || 'Primary';
+    
+    // Calculate benefit amount
+    const amount = calculateBenefitAmount(
+      input.isCollectingOAS,
+      input.currentOAS || 0,
+      input.oasStartAge,
+      input.expectedOAS
+    );
+    
+    // Calculate start year
+    const startYear = calculateStartYear(
+      input.isCollectingOAS,
+      input.age,
+      input.oasStartAge
+    );
+    
+    // Create stream
+    return createGovBenefitStream(
+      'primary_oas_benefit',
+      `${primaryName}'s OAS Benefit`,
+      amount,
+      startYear
+    );
+  };
+
+  // Create spouse's CPP stream
+  const createSpouseCppStream = (input: UserInput): ExtraIncomeStream | null => {
+    // Safety check
+    if (!input.hasSpouse || !input.spouseInfo) {
+      return null;
+    }
+    
+    const spouse = input.spouseInfo;
+    const spouseName = spouse.name ? `${spouse.name}'s` : "Spouse's";
+    
+    // Calculate benefit amount
+    const amount = calculateBenefitAmount(
+      spouse.isCollectingCPP,
+      spouse.currentCPP || 0,
+      spouse.cppStartAge,
+      spouse.expectedCPP
+    );
+    
+    // Calculate start year
+    const startYear = calculateStartYear(
+      spouse.isCollectingCPP,
+      spouse.age,
+      spouse.cppStartAge
+    );
+    
+    // Create stream
+    return createGovBenefitStream(
+      'spouse_cpp_benefit',
+      `${spouseName} CPP Benefit`,
+      amount,
+      startYear
+    );
+  };
+
+  // Create spouse's OAS stream
+  const createSpouseOasStream = (input: UserInput): ExtraIncomeStream | null => {
+    // Safety check
+    if (!input.hasSpouse || !input.spouseInfo) {
+      return null;
+    }
+    
+    const spouse = input.spouseInfo;
+    const spouseName = spouse.name ? `${spouse.name}'s` : "Spouse's";
+    
+    // Calculate benefit amount
+    const amount = calculateBenefitAmount(
+      spouse.isCollectingOAS,
+      spouse.currentOAS || 0,
+      spouse.oasStartAge,
+      spouse.expectedOAS
+    );
+    
+    // Calculate start year
+    const startYear = calculateStartYear(
+      spouse.isCollectingOAS,
+      spouse.age,
+      spouse.oasStartAge
+    );
+    
+    // Create stream
+    return createGovBenefitStream(
+      'spouse_oas_benefit',
+      `${spouseName} OAS Benefit`,
+      amount,
+      startYear
+    );
+  };
+
+  // Debug function to log the final streams
+  const logStreamsDebugInfo = (streams: ExtraIncomeStream[]): void => {
+    console.log("Final extra income streams:");
+    streams.forEach((stream, index) => {
+      console.log(`${index + 1}. ${stream.id}: ${stream.description}, $${stream.yearlyAmount}/year starting ${stream.startYear}`);
+    });
+    
+    // Check for duplicates
+    const ids = {};
+    let hasDuplicates = false;
+    streams.forEach(stream => {
+      if (ids[stream.id]) {
+        console.error(`DUPLICATE ID FOUND: ${stream.id}`);
+        hasDuplicates = true;
+      }
+      ids[stream.id] = true;
+    });
+    
+    if (hasDuplicates) {
+      console.error("WARNING: Duplicate IDs found in the final streams array!");
+    } else {
+      console.log("No duplicate IDs found - array looks good");
+    }
+  };
+
+// Function for InputForm.tsx - Keep primary and spouse benefit streams separate
+
+// Main function that coordinates the update of government benefits
+const updateGovBenefitsAsIncomeStreams = () => {
+  console.log("==== UPDATING GOVERNMENT BENEFITS ====");
+  
+  // Get a copy of the current income streams excluding government benefits
+  let primaryStreams = removeGovBenefitStreams(userInput.extraIncomeStreams);
+  
+  // Process primary person's CPP
+  if (shouldAddBenefit(userInput.cppStartAge, userInput.isCollectingCPP)) {
+    const primaryCppStream = createPrimaryCppStream(userInput);
+    if (primaryCppStream) {
+      primaryStreams.push(primaryCppStream);
+    }
+  }
+  
+  // Process primary person's OAS
+  if (shouldAddBenefit(userInput.oasStartAge, userInput.isCollectingOAS)) {
+    const primaryOasStream = createPrimaryOasStream(userInput);
+    if (primaryOasStream) {
+      primaryStreams.push(primaryOasStream);
+    }
+  }
+  
+  // Update the primary person's income streams
+  let updatedUserInput = {
+    ...userInput,
+    extraIncomeStreams: primaryStreams
+  };
+  
+  // Process spouse benefits if applicable
+  if (userInput.hasSpouse && userInput.spouseInfo) {
+    // Start with the spouse's existing non-government benefit streams
+    let spouseStreams = userInput.spouseInfo.extraIncomeStreams 
+      ? removeGovBenefitStreams(userInput.spouseInfo.extraIncomeStreams) 
+      : [];
+      
+    // Process spouse CPP
+    if (shouldAddBenefit(userInput.spouseInfo.cppStartAge, userInput.spouseInfo.isCollectingCPP)) {
+      const spouseCppStream = createSpouseCppStream(userInput);
+      if (spouseCppStream) {
+        spouseStreams.push(spouseCppStream);
+      }
+    }
+    
+    // Process spouse OAS
+    if (shouldAddBenefit(userInput.spouseInfo.oasStartAge, userInput.spouseInfo.isCollectingOAS)) {
+      const spouseOasStream = createSpouseOasStream(userInput);
+      if (spouseOasStream) {
+        spouseStreams.push(spouseOasStream);
+      }
+    }
+    
+    // Update spouse's income streams separately
+    updatedUserInput = {
+      ...updatedUserInput,
+      spouseInfo: {
+        ...updatedUserInput.spouseInfo!,
+        extraIncomeStreams: spouseStreams
+      }
+    };
+  }
+  
+  // Debug summary
+  console.log("Primary person's income streams:", updatedUserInput.extraIncomeStreams);
+  if (updatedUserInput.spouseInfo) {
+    console.log("Spouse's income streams:", updatedUserInput.spouseInfo.extraIncomeStreams);
+  }
+  
+  // Update the input with the finalized data
+  setUserInput(updatedUserInput);
+  
+  console.log("==== GOVERNMENT BENEFITS UPDATE COMPLETE ====");
+};
+
+
   const handleNext = () => {
     if (activeStep === steps.length - 1) {
       // Submit form and navigate to results
       navigate('/results', { state: { userInput } });
     } else {
+      // If moving from Benefits step (2) to Extra Income step (3)
+      if (activeStep === 2) {
+        // Add or update government benefits as income streams
+        updateGovBenefitsAsIncomeStreams();
+      }
+      
       setActiveStep((prevActiveStep) => prevActiveStep + 1);
     }
   };
@@ -193,9 +568,14 @@ const InputForm: React.FC = () => {
     };
     
     if (loadedInput.hasSpouse && loadedInput.spouseInfo) {
+      let startage = 65;
+      if (loadedInput.spouseInfo.age > startage)
+        startage = loadedInput.spouseInfo.age;
       loadedInput.spouseInfo = {
         ...loadedInput.spouseInfo,
         extraIncomeStreams: loadedInput.spouseInfo.extraIncomeStreams || [],
+        cppStartAge: loadedInput.spouseInfo.cppStartAge || startage,
+        oasStartAge: loadedInput.spouseInfo.oasStartAge || startage,
         isCollectingCPP: loadedInput.spouseInfo.isCollectingCPP || false,
         isCollectingOAS: loadedInput.spouseInfo.isCollectingOAS || false
       };

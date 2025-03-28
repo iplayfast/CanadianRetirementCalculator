@@ -49,6 +49,10 @@ export const calculateCPPIncome = (
  * @param expectedOas Expected OAS amounts at different ages
  * @returns Monthly OAS income before clawback
  */
+// In src/services/retirement/benefitCalculator.ts
+
+
+// Modified implementation to include 10% increase at age 75:
 export const calculateOASIncome = (
   currentAge: number,
   oasStartAge: number,
@@ -58,18 +62,27 @@ export const calculateOASIncome = (
     return 0;
   }
 
-  // Determine which rate to use based on age
+  // First determine base OAS amount
+  let baseAmount;
   if (oasStartAge === 65) {
-    return expectedOas.at65;
+    baseAmount = expectedOas.at65;
   } else if (oasStartAge === 70) {
-    return expectedOas.at70;
+    baseAmount = expectedOas.at70;
   } else {
     // Calculate interpolated values for ages between 65 and 70
     const rangeSize = expectedOas.at70 - expectedOas.at65;
     const ratio = (oasStartAge - 65) / 5;
-    return expectedOas.at65 + (rangeSize * ratio);
+    baseAmount = expectedOas.at65 + (rangeSize * ratio);
   }
+  
+  // Apply 10% increase for age 75 and older
+  if (currentAge >= 75) {
+    return baseAmount * 1.1; // 10% increase
+  }
+  
+  return baseAmount;
 };
+
 
 /**
  * Calculate income from extra income streams
@@ -89,11 +102,11 @@ export const calculateExtraIncome = (
   
   return extraIncomeStreams
     .filter(stream => {
-      // Determine the actual start year based on stream settings
+      // Only include streams that have a start year less than or equal to the current year
+      // and haven't reached their end year (if specified)
       const actualStartYear = stream.startYear || new Date().getFullYear();
       const actualEndYear = stream.endYear || Infinity;
 
-      // Check if the stream is active in the current year
       return currentYear >= actualStartYear && currentYear <= actualEndYear;
     })
     .reduce((total, stream) => {
@@ -117,6 +130,79 @@ export const calculateExtraIncome = (
 
 import { TAX_CONSTANTS } from '../../constants/taxConstants';
 import { ExtraIncomeStream } from '../../models/types';
+
+/**
+ * Calculate adjusted benefit amount for CPP based on claiming age
+ * @param currentBaseAmount Base monthly benefit amount
+ * @param claimingAge Age at which benefit is claimed
+ * @returns Adjusted monthly benefit amount
+ */
+export const calculateAdjustedCPPBenefit = (
+  currentBaseAmount: number, 
+  claimingAge: number
+): number => {
+  // Constants for CPP benefit adjustments
+  const EARLY_REDUCTION_RATE = 0.006; // 0.6% per month before 65
+  const LATE_INCREASE_RATE = 0.007;   // 0.7% per month after 65
+  const STANDARD_AGE = 65;
+  const MAX_EARLY_REDUCTION = 0.36;   // 36% reduction at age 60
+  const MAX_LATE_INCREASE = 0.42;     // 42% increase at age 70
+
+  // Calculate months difference from standard age
+  const monthsDifference = (claimingAge - STANDARD_AGE) * 12;
+
+  // Early claiming (before 65)
+  if (claimingAge < STANDARD_AGE) {
+    const reductionRate = Math.min(
+      monthsDifference * -EARLY_REDUCTION_RATE, 
+      -MAX_EARLY_REDUCTION
+    );
+    return currentBaseAmount * (1 + reductionRate);
+  } 
+  
+  // Late claiming (after 65)
+  if (claimingAge > STANDARD_AGE) {
+    const increaseRate = Math.min(
+      monthsDifference * LATE_INCREASE_RATE, 
+      MAX_LATE_INCREASE
+    );
+    return currentBaseAmount * (1 + increaseRate);
+  }
+
+  // Claiming exactly at standard age
+  return currentBaseAmount;
+};
+
+/**
+ * Calculate adjusted benefit amount for OAS based on claiming age
+ * @param currentBaseAmount Base monthly benefit amount
+ * @param claimingAge Age at which benefit is claimed
+ * @returns Adjusted monthly benefit amount
+ */
+export const calculateAdjustedOASBenefit = (
+  currentBaseAmount: number, 
+  claimingAge: number
+): number => {
+  // Constants for OAS benefit adjustments
+  const LATE_INCREASE_RATE = 0.006;   // 0.6% per month after 65
+  const STANDARD_AGE = 65;
+  const MAX_LATE_INCREASE = 0.30;     // 30% increase possible
+
+  // Calculate months difference from standard age
+  const monthsDifference = (claimingAge - STANDARD_AGE) * 12;
+
+  // Late claiming (after 65)
+  if (claimingAge > STANDARD_AGE) {
+    const increaseRate = Math.min(
+      monthsDifference * LATE_INCREASE_RATE, 
+      MAX_LATE_INCREASE
+    );
+    return currentBaseAmount * (1 + increaseRate);
+  }
+
+  // Claiming at or before standard age
+  return currentBaseAmount;
+};
 
 interface BenefitOptions {
   baseAmount: number;
@@ -239,8 +325,8 @@ export const generateBenefitIncomeStream = (
   // Create income stream
   return {
     id: `${benefitType.toLowerCase()}_benefit_${claimingAge}`,
-    description: `${benefitType} Benefit (Started at Age ${claimingAge})`,
-    yearlyAmount: adjustedMonthlyBenefit * 12,
+    description: `${benefitType} Benefit (Started at Age ${claimingAge})`,    
+    yearlyAmount: adjustedMonthlyBenefit * 12 * (benefitType === 'OAS' && currentAge >= 75 ? 1.1 : 1),
     startYear: new Date().getFullYear() + (claimingAge - currentAge),
     endYear: undefined, // Ongoing benefit
     hasInflation: true
